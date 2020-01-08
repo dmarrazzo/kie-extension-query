@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 @Path("server/queries/variables")
 public class VariablesQuery {
 
+	private static final String DATASOURCE = "${org.kie.server.persistence.ds}";
 	private static final String VARIABLES_QUERY_NAME = "VARIABLES_QUERY_NAME";
 
 	private static final Logger logger = LoggerFactory.getLogger(VariablesQuery.class);
@@ -60,9 +61,7 @@ public class VariablesQuery {
 			format = MarshallingFormat.valueOf(contentType);
 		}
 		try {
-			// TODO: change the datasource
-			QueryDefinition queryDefinition = new SqlQueryDefinition(VARIABLES_QUERY_NAME,
-					"java:jboss/datasources/ExampleDS", QueryDefinition.Target.CUSTOM);
+			QueryDefinition queryDefinition = new SqlQueryDefinition(VARIABLES_QUERY_NAME, DATASOURCE, QueryDefinition.Target.CUSTOM);
 
 			Map<String, String> variableMap = new HashMap<>();
 			String variableColumns = "";
@@ -106,9 +105,8 @@ public class VariablesQuery {
 	@Path("/")
 	@Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
-	public Response tasksVariablesFilter(@Context HttpHeaders headers, @QueryParam("vars") List<String> vars,
-			@QueryParam("filters") String filters) {
-		logger.info("VariablesQuery.tasksVariables()");
+	public Response tasksVariablesFilter(@Context HttpHeaders headers, @QueryParam("vars") List<String> vars, String filters) {
+		logger.info("VariablesQuery.tasksVariablesFilter()");
 		Variant v = getVariant(headers);
 		String contentType = getContentType(headers);
 
@@ -119,12 +117,9 @@ public class VariablesQuery {
 		}
 
 		Marshaller marshaller = MarshallerFactory.getMarshaller(format, this.getClass().getClassLoader());
-		QueryFilterSpec filterSpec = marshaller.unmarshall(filters, QueryFilterSpec.class);
 
 		try {
-			// TODO: change the datasource
-			QueryDefinition queryDefinition = new SqlQueryDefinition(VARIABLES_QUERY_NAME,
-					"java:jboss/datasources/ExampleDS", QueryDefinition.Target.CUSTOM);
+			QueryDefinition queryDefinition = new SqlQueryDefinition(VARIABLES_QUERY_NAME, DATASOURCE, QueryDefinition.Target.CUSTOM);
 
 			Map<String, String> variableMap = new HashMap<>();
 			String variableColumns = "";
@@ -144,14 +139,17 @@ public class VariablesQuery {
 
 			org.jbpm.services.api.query.model.QueryParam[] params = new org.jbpm.services.api.query.model.QueryParam[0];
 
-			if (filterSpec.getParameters() != null) {
-				params = new org.jbpm.services.api.query.model.QueryParam[filterSpec.getParameters().length];
-				int index = 0;
-				for (org.kie.server.api.model.definition.QueryParam param : filterSpec.getParameters()) {
-					params[index] = new org.jbpm.services.api.query.model.QueryParam(param.getColumn(),
-							param.getOperator(), param.getValue());
-					index++;
-				}
+			if (filters != null && !filters.isEmpty()) {
+				QueryFilterSpec filterSpec = marshaller.unmarshall(filters, QueryFilterSpec.class);
+				if (filterSpec.getParameters() != null) {
+					params = new org.jbpm.services.api.query.model.QueryParam[filterSpec.getParameters().length];
+					int index = 0;
+					for (org.kie.server.api.model.definition.QueryParam param : filterSpec.getParameters()) {
+						params[index] = new org.jbpm.services.api.query.model.QueryParam(param.getColumn(),
+								param.getOperator(), param.getValue());
+						index++;
+					}
+				}					
 			}
 
 			List<UserTaskInstanceWithVarsDesc> list = queryService.query(VARIABLES_QUERY_NAME,
