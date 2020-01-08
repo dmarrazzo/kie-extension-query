@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.jbpm.services.api.query.QueryService;
 import org.kie.server.services.api.KieServerApplicationComponentsService;
-import org.kie.server.services.api.KieServerRegistry;
 import org.kie.server.services.api.SupportedTransports;
 import org.kie.server.services.jbpm.JbpmKieServerExtension;
 
@@ -22,22 +21,18 @@ public class QueryExtensionComponentsService implements KieServerApplicationComp
             return Collections.emptyList();
         }
 
-        KieServerRegistry kieServerRegistry = null;
         QueryService queryService = null;
 
         for (Object object : services) {
             if (QueryService.class.isAssignableFrom(object.getClass())) {
                 queryService = (QueryService) object;
                 continue;
-            } else if (KieServerRegistry.class.isAssignableFrom(object.getClass())) {
-                kieServerRegistry = (KieServerRegistry) object;
-                continue;
             }
         }
 
         List<Object> components = new ArrayList<Object>(1);
         if (SupportedTransports.REST.equals(supportedTransports)) {
-            components.add(new VariablesQuery(kieServerRegistry, queryService));
+            components.add(new VariablesQuery(queryService));
         }
         
         System.out.println("QueryExtensionComponentsService.getAppComponents()");
